@@ -140,7 +140,7 @@ new_activity_data$Weekday <- as.factor(new_activity_data$Weekday)
 levels(new_activity_data$Weekday)
 ```
 ```{r}
-ggplot(data = new_activity_data,aes(interval,steps)) + geom_line(aes(interval,steps)) + facet_grid(rows = Weekday)
+ggplot(data = new_activity_data,aes(interval,steps)) + geom_line(aes(interval,steps))  + geom_smooth() + facet_grid(rows = vars(Weekday)) + labs(x= "Interval",y= "Steps Taken",title = "Steps Taken in Different Intervals on Weekdays and Weekend")
 ```
 
 
