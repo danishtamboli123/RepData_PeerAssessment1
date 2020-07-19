@@ -1,25 +1,146 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Activity Monitoring Data Report"
+author: "Danish Tamboli"
+date: "July 19, 2020"
+output: html_document
 ---
 
+### Check for if Zip has been Downloaded,else to download:
 
-## Loading and preprocessing the data
+```{r}
+if(!file.exists("activity_monitoring_data.zip")){
+        download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip","activity_monitoring_data.zip")
+        }
+```
+
+### Check for if Zip has been Unzipped,else to unzip:
+
+```{r}
+if(!file.exists("activity_monitoring_data")){
+        unzip("activity_monitoring_data.zip")
+        }
+```
+
+### Reading the Activity Monitoring Dataset, and having a look at how the Dataset looks:
+
+```{r}
+activity_data <- read.csv("activity.csv")
+dim(activity_data)
+head(activity_data)
+```
+
+#### We notice that there are missing Values present in the Dataset.  
+
+### Looking at the sumamry of the Dataset:
+
+```{r}
+summary(activity_data)
+```
+#### We notice the following:
+* The Mean of the Steps taken per 5min is 37.38.
+* The Date field is of character type and not date, In is in (Y-m-d) format.
+* The readings have been taken at Intervals of 5 min.  
+
+#### Converting Date from class char to Date:
+```{r}
+activity_data$date <- as.Date(activity_data$date,"%Y-%d-%m")
+```
+
+#### Having a look at the Dataset once again:
+```{r}
+str(activity_data)
+```
+#### Calculating the Total Number of steps per day:
+```{r}
+steps_datewise <- aggregate(steps~date,activity_data,sum)
+```
+
+#### Histogram of Total Number of steps per day:
+```{r}
+library(ggplot2)
+ggplot(data = steps_datewise,aes(steps)) + geom_histogram(aes(steps)) +  geom_rug(aes(steps)) + labs(x="Steps Taken per Day",y="Number of Days",title="Histogram of Steps taken in a Day")
+```
+
+#### Calculating the Mean and Median of Total steps per Day:
+
+##### Here the Question that arises is whether to calculate the Mean and Median by 
+* Total Steps of Complete Duration (Which would give us per Day).
+* Total Steps of Per Day (Which would give us per interval).
+* We will be going with Mean and Median of Total steps over the Total Duration.
+
+```{r}
+total_steps <- sum(steps_datewise$steps,na.rm = TRUE)
+mean_steps <- mean(steps_datewise$steps,na.rm = TRUE)
+median_steps <- median(steps_datewise$steps,na.rm = TRUE)
+dummydf <- data.frame(total_steps,mean_steps,median_steps)
+colnames(dummydf) <- c("Total","Mean","Median")
+```
+
+##### The Total,Mean and Median are as follows:
+```{r}
+knitr::kable(dummydf)
+```
+
+#### Time-series Plot of Average Steps taken in Each Interval of Days over Complete Duration:
+```{r}
+average_steps_per_interval <- aggregate(steps~interval,activity_data,mean)
+ggplot(data = average_steps_per_interval,aes(interval,steps)) + geom_line() + labs(x = "Interval (5min)",y = "Average Steps taken",title = "Average Steps taken per 5min Interval")
+```
+
+##### Which exact interval contains the maximum average steps?
+```{r}
+knitr::kable(average_steps_per_interval[which.max(average_steps_per_interval$steps),])
+```
+
+#### Missing Values:
+```{r}
+Total_NA <- sum(is.na(activity_data))
+Steps_NA <- sum(is.na(activity_data[,1]))
+Dates_NA <- sum(is.na(activity_data[,2]))
+dummydf1 <- data.frame(Total_NA,Steps_NA,Dates_NA)
+colnames(dummydf1) <- c("Total NA", "Steps NA", "Dates NA")
+knitr::kable(dummydf1)
+```
+#### Imputing the Missing Steps
+```{r}
+Steps_Na <- is.na(activity_data$steps)
+Dates_Na <- is.na(activity_data$date)
+new_activity_data <- activity_data
+for(i in 1:nrow(new_activity_data)){
+        if(is.na(new_activity_data[i,"steps"])){
+                
+                new_activity_data[i,"steps"] = average_steps_per_interval[average_steps_per_interval$interval==new_activity_data[i,"interval"],"steps"]
+        }
+}
+head(new_activity_data)
+table(is.na(new_activity_data$steps))
+```
+##### The approach we have taken is to impute the missing NA Steps with the mean of Steps in that Interval over the complete duration, as we can see from the is.na check, now we have no missing values in the steps column.
+
+#### Histogram of Total Steps in a Day after Adjusting for NA Step Values.
+```{r}
+new_steps_datewise <- aggregate(steps~date,new_activity_data,sum)
+ggplot(data = new_steps_datewise) + geom_histogram(aes(steps)) + labs(x="Steps",y="Number of Days",title = "Total Steps in a Day after adjusting for NA Steps") + geom_rug(aes(steps))
+````
 
 
+#### Segregating the Days by a factor of 2 levels into Weekdays and Weekends.
+```{r}
+for(i in 1:nrow(new_activity_data)){
+        if(weekdays(new_activity_data[i,"date"]) %in% c("Monday","Tuesday","Wednesday","Thursday","Friday")){
+                new_activity_data[i,"Weekday"] <- "weekday"
+        }
+        else {
+                new_activity_data[i,"Weekday"] <- "weekend"
+        }
+}
 
-## What is mean total number of steps taken per day?
+new_activity_data$Weekday <- as.factor(new_activity_data$Weekday)
+
+levels(new_activity_data$Weekday)
+```
+```{r}
+ggplot(data = new_activity_data,aes(interval,steps)) + geom_line(aes(interval,steps)) + facet_grid(rows = Weekday)
+```
 
 
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
